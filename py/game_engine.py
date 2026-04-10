@@ -530,12 +530,26 @@ def _render_booking(st: GameState) -> str:
         mt = seg.match_type or "(not set)"
         target = match_participant_target(mt) if mt else None
         already = len(b.picked_ids)
+
+        # Team-based matches are picked as teams
+        team_hint = ""
+        if mt == "Tag":
+            team_no = 1 if len(seg.wrestler_ids) < 2 else 2
+            team_hint = f"\nTeam {'A' if team_no == 1 else 'B'}: pick 2 wrestler(s)"
+        if mt == "Iron Warfare":
+            team_no = 1 if len(seg.wrestler_ids) < 3 else 2
+            team_hint = f"\nTeam {'A' if team_no == 1 else 'B'}: pick 3 wrestler(s)"
+
         prompt = "Pick wrestlers" if target is None else f"Pick {target} wrestler(s)"
+        if mt == "Tag":
+            prompt = "Pick 2 wrestler(s)"  # per team
+        if mt == "Iron Warfare":
+            prompt = "Pick 3 wrestler(s)"  # per team
 
         used_note = "Wrestlers used in earlier segments are hidden." if b.used_wrestler_ids else ""
         return (
             "BOOK A SHOW\n" + status_line(st)
-            + f"\n\nSegment {seg_no}/3 - {mt}\n{prompt} (selected {already})\n"
+            + f"\n\nSegment {seg_no}/3 - {mt}\n{prompt} (selected {already}){team_hint}\n"
             + (used_note + "\n" if used_note else "")
             + "\nTap names to toggle selection, then tap Done."
         )
@@ -578,18 +592,28 @@ def _choices_booking(st: GameState) -> list[Choice]:
         available = [w for w in st.promo.roster.values() if w.id not in b.used_wrestler_ids]
         available.sort(key=lambda w: (-w.popularity, w.name))
 
-        ch = []
+        ch: list[Choice] = []
         for w in available:
             picked = w.id in b.picked_ids
             box = "[x]" if picked else "[ ]"
             ch.append(Choice(f"pick:{w.id}", f"{box} {w.name}"))
 
         # Done button
-        if target is None:
-            ok = len(b.picked_ids) >= 2
+        if mt == "Tag":
+            ok = len(b.picked_ids) == 2
+            team_no = 1 if len(seg.wrestler_ids) < 2 else 2
+            done_label = (f"Done (Team {'A' if team_no == 1 else 'B'})" if ok else "Done (select 2)")
+        elif mt == "Iron Warfare":
+            ok = len(b.picked_ids) == 3
+            team_no = 1 if len(seg.wrestler_ids) < 3 else 2
+            done_label = (f"Done (Team {'A' if team_no == 1 else 'B'})" if ok else "Done (select 3)")
         else:
-            ok = len(b.picked_ids) == target
-        done_label = "Done" if ok else "Done (select more)"
+            if target is None:
+                ok = len(b.picked_ids) >= 2
+            else:
+                ok = len(b.picked_ids) == target
+            done_label = "Done" if ok else "Done (select more)"
+
         ch.insert(0, Choice("pick:done", done_label))
 
         ch.append(Choice("booking:back", "Back"))
@@ -692,6 +716,48 @@ def _choose_booking(st: GameState, choice_id: str) -> GameState:
 
         if choice_id == "pick:done":
             # validate
+            if mt == "Tag":
+                if len(b.picked_ids) != 2:
+                    return st
+                # append picks in order: Team A then Team B
+                picked_ordered = sorted(b.picked_ids, key=lambda wid: st.promo.roster[wid].name if wid in st.promo.roster else wid)
+                seg.wrestler_ids.extend(picked_ordered)
+                b.used_wrestler_ids.update(picked_ordered)
+                b.picked_ids = set()
+
+                # if Team A just chosen, stay in pick to choose Team B
+                if len(seg.wrestler_ids) < 4:
+                    return st
+
+                # Team B done (4 total) -> proceed
+                if b.segment_index < 2:
+                    b.segment_index += 1
+                    b.phase = "type"
+                    return st
+
+                st.ui = "confirm"
+                return st
+
+            if mt == "Iron Warfare":
+                if len(b.picked_ids) != 3:
+                    return st
+                picked_ordered = sorted(b.picked_ids, key=lambda wid: st.promo.roster[wid].name if wid in st.promo.roster else wid)
+                seg.wrestler_ids.extend(picked_ordered)
+                b.used_wrestler_ids.update(picked_ordered)
+                b.picked_ids = set()
+
+                # Team A then Team B
+                if len(seg.wrestler_ids) < 6:
+                    return st
+
+                if b.segment_index < 2:
+                    b.segment_index += 1
+                    b.phase = "type"
+                    return st
+
+                st.ui = "confirm"
+                return st
+
             if target is None:
                 required = seg.br_size or 6
                 if len(b.picked_ids) != required:
@@ -722,6 +788,12 @@ def _choose_booking(st: GameState, choice_id: str) -> GameState:
             # for battle royale, size is fixed once chosen
             if mt == "Battle Royale":
                 required = seg.br_size or 6
+            elif mt == "Tag":
+                # pick 2 at a time (Team A then Team B)
+                required = 2
+            elif mt == "Iron Warfare":
+                # pick 3 at a time (Team A then Team B)
+                required = 3
             else:
                 required = target
 
@@ -771,7 +843,12 @@ def _format_participants(mt: str, ws: list[Wrestler]) -> str:
         return f"Team A: {t1[0].name} & {t1[1].name}  vs  Team B: {t2[0].name} & {t2[1].name}"
 
     if mt == "Iron Warfare" and len(ordered) == 6:
-        return "Entrants: " + ", ".join(w.name for w in ordered)
+        t1 = ordered[:3]
+        t2 = ordered[3:]
+        return (
+            "Team A: " + ", ".join(w.name for w in t1)
+            + "  vs  Team B: " + ", ".join(w.name for w in t2)
+        )
 
     if mt == "Battle Royale":
         return "Entrants: " + ", ".join(w.name for w in ordered)
