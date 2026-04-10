@@ -447,10 +447,10 @@ def _render_screen(st: GameState) -> str:
         ]
         for i, seg in enumerate(b.segments, start=1):
             mt = seg.match_type or "(unset)"
-            names = [st.promo.roster[wid].name for wid in seg.wrestler_ids if wid in st.promo.roster]
+            ws = [st.promo.roster[wid] for wid in seg.wrestler_ids if wid in st.promo.roster]
             lines.append(f"Segment {i}: {mt}")
-            if names:
-                lines.append("  " + ", ".join(names))
+            if ws:
+                lines.append("  " + _format_participants(mt, ws))
             else:
                 lines.append("  (no wrestlers selected)")
         lines.append("")
@@ -758,6 +758,30 @@ def _feud_key(a: str, b: str) -> str:
     return f"{x}|{y}"
 
 
+def _format_participants(mt: str, ws: list[Wrestler]) -> str:
+    if not ws:
+        return "(n/a)"
+
+    # Stable ordering for display
+    ordered = sorted(ws, key=lambda w: (-w.popularity, w.name))
+
+    if mt == "Tag" and len(ordered) == 4:
+        t1 = ordered[:2]
+        t2 = ordered[2:]
+        return f"Team A: {t1[0].name} & {t1[1].name}  vs  Team B: {t2[0].name} & {t2[1].name}"
+
+    if mt == "Iron Warfare" and len(ordered) == 6:
+        return "Entrants: " + ", ".join(w.name for w in ordered)
+
+    if mt == "Battle Royale":
+        return "Entrants: " + ", ".join(w.name for w in ordered)
+
+    if mt == "Promo" and len(ordered) == 1:
+        return ordered[0].name
+
+    return ", ".join(w.name for w in ordered)
+
+
 def _run_show(st: GameState) -> None:
     assert st.booking is not None
     b = st.booking
@@ -819,10 +843,10 @@ def _run_show(st: GameState) -> None:
         total_star += star
         total_rating += rating
 
-        names = ", ".join(w.name for w in ws) if ws else "(n/a)"
+        participants_txt = _format_participants(mt, ws)
         win_txt = f" Winner: {winner.name}." if winner is not None else ""
         results_lines.append(f"\nSegment {i}: {mt}")
-        results_lines.append(f"  Participants: {names}")
+        results_lines.append(f"  Participants: {participants_txt}")
         results_lines.append(f"  Rating: {rating}/100.{win_txt}")
 
     show_rating = int(total_rating / 3) if total_rating else 0
