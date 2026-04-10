@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wrestling Promoter Sim</title>
+  <link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="title">Wrestling Promoter Sim</div>
+      <div class="subtitle" id="status">Loading…</div>
+    </div>
+    <div class="actions">
+      <button id="btnNew" class="btn">New Game</button>
+      <button id="btnSave" class="btn" disabled>Save</button>
+      <button id="btnLoad" class="btn" disabled>Load</button>
+      <button id="btnReset" class="btn btn-danger" disabled>Clear Saves</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <h2>Screen</h2>
+      <div id="screen" class="screen" aria-live="polite"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Choices</h2>
+      <div id="choices" class="choices"></div>
+      <div class="hint">
+        Mobile-friendly: tap buttons. Desktop: click buttons.
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Runs locally in your browser (no accounts). Saves are stored on this device.</span>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+  <script type="module" src="./assets/app.js"></script>
+</body>
+</html>
