@@ -15,7 +15,7 @@ body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvet
 .panel h2{margin:0 0 10px 0;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em}
 .screen{min-height:360px;max-height:65vh;overflow:auto;padding:12px;background:rgba(0,0,0,0.25);border:1px solid var(--line);border-radius:12px;white-space:pre-wrap;line-height:1.35}
 .choices{display:flex;flex-direction:column;gap:8px}
-.choice{display:flex;gap:10px;align-items:flex-start;background:rgba(0,0,0,0.2);border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;text-align:left}
+.choice{display:flex;gap:10px;align-items:flex-start;background:rgba(0,0,0,0.2);border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;text-align:left;color:#ffffff}
 .choice:hover{border-color:#365489}
 .choice .num{min-width:28px;opacity:0.8;color:var(--muted)}
 .choice .label{flex:1}
