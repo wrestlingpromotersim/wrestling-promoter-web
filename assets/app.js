@@ -24,9 +24,12 @@ let state = null;
 
 function render() {
   if (!engine || !state) return;
+
   const status = engine.status_line(state);
-  els.status.textContent = status;
-  els.screen.textContent = state.screen || '';
+  els.status.textContent = String(status);
+
+  const screen = engine.get_screen(state);
+  els.screen.textContent = String(screen || '');
 
   els.choices.innerHTML = '';
   const choices = engine.get_choices(state);
@@ -64,9 +67,9 @@ async function init() {
   // bind a lightweight JS facade for calls
   engine = {
     status_line: (st) => pyodide.globals.get('status_line')(st),
+    get_screen: (st) => pyodide.globals.get('get_screen')(st),
     get_choices: (st) => {
       const arr = pyodide.globals.get('get_choices')(st);
-      // convert python list[Choice] to JS array
       return arr.toJs({ dict_converter: Object.fromEntries });
     },
     choose: (st, id) => pyodide.globals.get('choose')(st, id),
